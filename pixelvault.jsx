@@ -624,8 +624,8 @@ function PixelArt({ game, size = "large" }) {
 
 // --- Store Page ---
 function StorePage({ onAddToLibrary, library, onOpenGame }) {
-  const [platform, setPlatform] = useState("ALL");
-  const [genre, setGenre] = useState("ALL");
+  const [platform, setPlatform] = useState("TUTTI");
+  const [genre, setGenre] = useState("TUTTI");
   const [sort, setSort] = useState("popular");
   const [heroIdx, setHeroIdx] = useState(0);
 

@@ -308,6 +308,7 @@ function showOverlay(isGameOver) {
 
 // ── Drawing ───────────────────────────────────────────────────────────────
 function draw() {
+  if (!snake || !food) return; // non ancora inizializzato
   // Background grid
   ctx.fillStyle = '#000';
   ctx.fillRect(0, 0, canvas.width, canvas.height);
