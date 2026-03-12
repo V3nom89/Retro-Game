@@ -54,11 +54,9 @@
     justify-content: space-between; align-items: flex-end;
     z-index: 20;
   }
-  @media (hover: none) and (pointer: coarse) {
-    #touch-controls { display: flex; }
-    body { justify-content: flex-start; padding-top: 10px; }
-    #back-btn { font-size: 7px; padding: 7px 10px; top: 10px; left: 10px; }
-  }
+  body.touch-device { justify-content: flex-start; padding-top: 10px; }
+  body.touch-device #back-btn { font-size: 7px; padding: 7px 10px; top: 10px; left: 10px; }
+  body.touch-device #touch-controls { display: flex; }
   .joy-pad { display: flex; gap: 10px; align-items: center; }
   .joy-btn {
     width: 68px; height: 68px;
@@ -647,6 +645,16 @@ const config = {
 
 const game = new Phaser.Game(config);
 window.game = game;
+
+// ── Rilevamento touch device ─────────────────────────────────────────────
+function isTouchDevice() {
+  return ('ontouchstart' in window) ||
+         (navigator.maxTouchPoints > 0) ||
+         (navigator.msMaxTouchPoints > 0);
+}
+if (isTouchDevice()) {
+  document.body.classList.add('touch-device');
+}
 
 // ── Touch controls ──────────────────────────────────────────────────────
 function setupTouchControls() {
