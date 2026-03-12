@@ -658,8 +658,8 @@ function StorePage({ onAddToLibrary, library, onOpenGame }) {
             <div className="hero-title">{heroGame.title}</div>
             <div className="hero-desc">{heroGame.desc}</div>
             <div className="hero-actions">
-              <button className="btn-primary" onClick={() => library.includes(heroGame.id) ? playGame(heroGame) : onAddToLibrary(heroGame)}>
-                {library.includes(heroGame.id) ? "▶ GIOCA ORA" : "＋ AGGIUNGI ALLA LIBRERIA"}
+              <button className="btn-primary" onClick={() => GAME_URLS[heroGame.id] ? playGame(heroGame) : onAddToLibrary(heroGame)}>
+                {GAME_URLS[heroGame.id] ? "▶ GIOCA ORA" : "＋ AGGIUNGI ALLA LIBRERIA"}
               </button>
               <button className="btn-secondary" onClick={() => onOpenGame(heroGame)}>VEDI DETTAGLI</button>
               <span className="hero-price" style={{ color: "var(--green)", fontSize: 14 }}>GRATIS</span>
@@ -731,8 +731,8 @@ function StorePage({ onAddToLibrary, library, onOpenGame }) {
                     <div className="badge" style={{ background: BADGE_COLORS[g.badge], color: g.badge === "SALE" ? "#000" : "#fff" }}>{g.badge}</div>
                   )}
                   <div className="card-overlay">
-                    <button className="overlay-btn buy" onClick={e => { e.stopPropagation(); library.includes(g.id) ? playGame(g) : onAddToLibrary(g); }}>
-                      {library.includes(g.id) ? "▶ GIOCA" : "+ GRATIS"}
+                    <button className="overlay-btn buy" onClick={e => { e.stopPropagation(); GAME_URLS[g.id] ? playGame(g) : onAddToLibrary(g); }}>
+                      {GAME_URLS[g.id] ? "▶ GIOCA" : "+ GRATIS"}
                     </button>
                     <button className="overlay-btn wish" onClick={e => e.stopPropagation()}>♥</button>
                   </div>
@@ -1133,8 +1133,8 @@ export default function App() {
                 </div>
               </div>
               <div className="modal-footer">
-                <button className="btn-primary" onClick={() => { if (library.includes(modal.id)) { playGame(modal); setModal(null); } else { addToLibrary(modal); setModal(null); } }}>
-                  {library.includes(modal.id) ? "▶ GIOCA ORA" : "＋ AGGIUNGI ALLA LIBRERIA"}
+                <button className="btn-primary" onClick={() => { if (GAME_URLS[modal.id]) { playGame(modal); setModal(null); } else { addToLibrary(modal); setModal(null); } }}>
+                  {GAME_URLS[modal.id] ? "▶ GIOCA ORA" : "＋ AGGIUNGI ALLA LIBRERIA"}
                 </button>
                 <button className="btn-secondary" onClick={() => setModal(null)}>CHIUDI</button>
               </div>
