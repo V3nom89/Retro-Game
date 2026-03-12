@@ -1,0 +1,413 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>BREAKOUT — PixelVault</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    background: #000;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: flex-start;
+    min-height: 100vh;
+    font-family: 'Courier New', monospace;
+    overflow: hidden;
+    touch-action: none;
+  }
+  #ui-bar {
+    width: 100%;
+    max-width: 400px;
+    display: flex;
+    justify-content: space-between;
+    padding: 8px 12px;
+    background: #0a0a0a;
+    border-bottom: 2px solid #00f5ff;
+    color: #00f5ff;
+    font-size: clamp(8px, 2.5vw, 12px);
+    letter-spacing: 1px;
+  }
+  #ui-bar .title { color: #ffe600; font-weight: bold; font-size: clamp(9px, 2.8vw, 13px); }
+  #canvas-wrap {
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex: 1;
+  }
+  #gameCanvas {
+    border: 2px solid #00f5ff;
+    box-shadow: 0 0 20px #00f5ffaa;
+    display: block;
+  }
+  #overlay {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    background: rgba(0,0,0,0.88);
+    color: #00f5ff;
+    text-align: center;
+    gap: 14px;
+  }
+  #overlay h1 { font-size: clamp(18px, 6vw, 32px); text-shadow: 0 0 20px #00f5ff; letter-spacing: 4px; }
+  #overlay p  { font-size: clamp(9px, 2.5vw, 13px); color: #aaa; }
+  #overlay .hi { color: #ffff00; font-size: clamp(10px, 2.8vw, 14px); }
+  #startBtn {
+    background: #00f5ff;
+    color: #000;
+    border: none;
+    padding: 12px 32px;
+    font-family: 'Courier New', monospace;
+    font-size: clamp(11px, 3vw, 15px);
+    font-weight: bold;
+    cursor: pointer;
+    letter-spacing: 2px;
+  }
+  #startBtn:hover, #startBtn:active { box-shadow: 0 0 16px #00f5ff; }
+  /* Touch paddle controls */
+  #touch-controls {
+    display: none;
+    justify-content: center;
+    gap: 24px;
+    padding: 10px 0 8px;
+    width: 100%;
+    max-width: 400px;
+  }
+  body.touch-device #touch-controls { display: flex; }
+  .pad-btn {
+    flex: 1;
+    max-width: 140px;
+    height: 56px;
+    background: rgba(0,245,255,0.15);
+    border: 2px solid #00f5ff;
+    border-radius: 8px;
+    color: #00f5ff;
+    font-size: 26px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    user-select: none;
+    -webkit-user-select: none;
+  }
+  .pad-btn.pressed { background: rgba(0,245,255,0.4); }
+</style>
+</head>
+<body>
+
+<div id="ui-bar">
+  <span class="title">🧱 BREAKOUT</span>
+  <span>SCORE: <span id="scoreDisplay">0</span></span>
+  <span>HI: <span id="hiDisplay">0</span></span>
+  <span>❤ <span id="livesDisplay">3</span></span>
+</div>
+
+<div id="canvas-wrap">
+  <canvas id="gameCanvas"></canvas>
+  <div id="overlay">
+    <h1>🧱 BREAKOUT</h1>
+    <p class="hi">HI-SCORE: <span id="overlayHi">0</span></p>
+    <p>Mouse / tocca per muovere il paddle</p>
+    <p>Distruggi tutti i mattoni!</p>
+    <button id="startBtn">▶ INIZIA</button>
+  </div>
+</div>
+
+<div id="touch-controls">
+  <div class="pad-btn" id="btn-left">◀</div>
+  <div class="pad-btn" id="btn-right">▶</div>
+</div>
+
+<script>
+const GAME_NAME = 'breakout';
+const canvas = document.getElementById('gameCanvas');
+const ctx = canvas.getContext('2d');
+const overlay = document.getElementById('overlay');
+const scoreDisplay = document.getElementById('scoreDisplay');
+const hiDisplay    = document.getElementById('hiDisplay');
+const livesDisplay = document.getElementById('livesDisplay');
+const overlayHi    = document.getElementById('overlayHi');
+
+// ── Layout ────────────────────────────────────────────────────────────────
+const W = 400, H = 500;
+canvas.width  = W;
+canvas.height = H;
+
+function resizeCanvas() {
+  const maxW = Math.min(window.innerWidth, 400);
+  const uiH  = document.getElementById('ui-bar').offsetHeight;
+  const tcH  = document.getElementById('touch-controls').offsetHeight || 0;
+  const avail = window.innerHeight - uiH - tcH - 10;
+  const scale = Math.min(maxW / W, avail / H);
+  canvas.style.width  = (W * scale) + 'px';
+  canvas.style.height = (H * scale) + 'px';
+}
+window.addEventListener('resize', resizeCanvas);
+resizeCanvas();
+
+if ('ontouchstart' in window || navigator.maxTouchPoints > 0) {
+  document.body.classList.add('touch-device');
+  setTimeout(resizeCanvas, 100);
+}
+
+// ── Score ─────────────────────────────────────────────────────────────────
+const currentUser = localStorage.getItem('pv_user') || null;
+let hiScore = 0;
+
+async function loadHiScore() {
+  if (!currentUser) return;
+  try {
+    const r = await fetch(`/api/score?username=${encodeURIComponent(currentUser)}&game=${GAME_NAME}`);
+    if (r.ok) { hiScore = (await r.json()).high_score || 0; updateHiUI(); }
+  } catch {}
+}
+
+async function saveHiScore(s) {
+  if (!currentUser || s <= hiScore) return;
+  hiScore = s;
+  updateHiUI();
+  try {
+    await fetch('/api/score', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ username: currentUser, game: GAME_NAME, score: s })
+    });
+  } catch {}
+}
+
+function updateHiUI() {
+  hiDisplay.textContent = hiScore.toLocaleString();
+  overlayHi.textContent = hiScore.toLocaleString();
+}
+
+loadHiScore();
+
+// ── Bricks config ─────────────────────────────────────────────────────────
+const BRICK_ROWS = 6, BRICK_COLS = 10;
+const BRICK_W = 36, BRICK_H = 16, BRICK_PAD = 4;
+const BRICK_OFF_X = 10, BRICK_OFF_Y = 50;
+const BRICK_COLORS = ['#ff003c','#ff6600','#ffe600','#00ff41','#00f5ff','#bf00ff'];
+
+// ── Game state ─────────────────────────────────────────────────────────────
+let paddle, ball, bricks, score, lives, level, raf, running = false;
+const touchState = { left: false, right: false };
+const PADDLE_SPEED = 6;
+
+function buildBricks(lvl) {
+  const b = [];
+  for (let r = 0; r < BRICK_ROWS; r++) {
+    for (let c = 0; c < BRICK_COLS; c++) {
+      const hits = r < 2 ? 2 : 1; // top 2 rows need 2 hits
+      b.push({
+        x: BRICK_OFF_X + c * (BRICK_W + BRICK_PAD),
+        y: BRICK_OFF_Y + r * (BRICK_H + BRICK_PAD),
+        w: BRICK_W, h: BRICK_H,
+        color: BRICK_COLORS[r % BRICK_COLORS.length],
+        hits, maxHits: hits, alive: true
+      });
+    }
+  }
+  return b;
+}
+
+function init() {
+  score = 0; lives = 3; level = 1;
+  paddle = { x: W / 2 - 40, y: H - 30, w: 80, h: 12 };
+  resetBall();
+  bricks = buildBricks(level);
+  running = true;
+  overlay.style.display = 'none';
+  scoreDisplay.textContent = '0';
+  livesDisplay.textContent = '3';
+  cancelAnimationFrame(raf);
+  loop();
+}
+
+function resetBall() {
+  const angle = (Math.random() * 60 + 60) * Math.PI / 180;
+  const speed = 4 + (level - 1) * 0.4;
+  ball = { x: W / 2, y: H - 60, r: 7, dx: speed * Math.cos(angle) * (Math.random() < 0.5 ? 1 : -1), dy: -speed * Math.sin(angle) };
+}
+
+function loop() {
+  if (!running) return;
+  update();
+  draw();
+  raf = requestAnimationFrame(loop);
+}
+
+function update() {
+  // Paddle movement via keyboard/touch
+  if (keys['ArrowLeft'] || keys['a'] || touchState.left)  paddle.x -= PADDLE_SPEED;
+  if (keys['ArrowRight'] || keys['d'] || touchState.right) paddle.x += PADDLE_SPEED;
+  paddle.x = Math.max(0, Math.min(W - paddle.w, paddle.x));
+
+  // Ball movement
+  ball.x += ball.dx;
+  ball.y += ball.dy;
+
+  // Wall bounces
+  if (ball.x - ball.r < 0) { ball.x = ball.r; ball.dx = Math.abs(ball.dx); }
+  if (ball.x + ball.r > W) { ball.x = W - ball.r; ball.dx = -Math.abs(ball.dx); }
+  if (ball.y - ball.r < 0) { ball.y = ball.r; ball.dy = Math.abs(ball.dy); }
+
+  // Paddle collision
+  if (ball.dy > 0 &&
+      ball.y + ball.r >= paddle.y &&
+      ball.y + ball.r <= paddle.y + paddle.h + Math.abs(ball.dy) &&
+      ball.x >= paddle.x && ball.x <= paddle.x + paddle.w) {
+    const hit = (ball.x - (paddle.x + paddle.w / 2)) / (paddle.w / 2);
+    const angle = hit * 65 * Math.PI / 180;
+    const speed = Math.sqrt(ball.dx * ball.dx + ball.dy * ball.dy);
+    ball.dx = speed * Math.sin(angle);
+    ball.dy = -Math.abs(speed * Math.cos(angle));
+    ball.y = paddle.y - ball.r;
+  }
+
+  // Ball lost
+  if (ball.y - ball.r > H) {
+    lives--;
+    livesDisplay.textContent = lives;
+    if (lives <= 0) { endGame(); return; }
+    resetBall();
+  }
+
+  // Brick collisions
+  let allGone = true;
+  for (const b of bricks) {
+    if (!b.alive) continue;
+    allGone = false;
+    if (ball.x + ball.r > b.x && ball.x - ball.r < b.x + b.w &&
+        ball.y + ball.r > b.y && ball.y - ball.r < b.y + b.h) {
+      b.hits--;
+      if (b.hits <= 0) {
+        b.alive = false;
+        score += (b.maxHits === 2 ? 20 : 10) * level;
+        scoreDisplay.textContent = score.toLocaleString();
+      }
+      // Determine bounce direction
+      const overlapL = ball.x + ball.r - b.x;
+      const overlapR = b.x + b.w - (ball.x - ball.r);
+      const overlapT = ball.y + ball.r - b.y;
+      const overlapB = b.y + b.h - (ball.y - ball.r);
+      const minH = Math.min(overlapL, overlapR);
+      const minV = Math.min(overlapT, overlapB);
+      if (minH < minV) ball.dx = -ball.dx; else ball.dy = -ball.dy;
+      break;
+    }
+  }
+
+  if (allGone) {
+    level++;
+    bricks = buildBricks(level);
+    resetBall();
+    paddle.w = Math.max(40, 80 - (level - 1) * 5);
+  }
+}
+
+function draw() {
+  ctx.fillStyle = '#000';
+  ctx.fillRect(0, 0, W, H);
+
+  // Bricks
+  for (const b of bricks) {
+    if (!b.alive) continue;
+    const alpha = b.hits === b.maxHits ? 1 : 0.55;
+    ctx.globalAlpha = alpha;
+    ctx.fillStyle = b.color;
+    ctx.shadowColor = b.color;
+    ctx.shadowBlur = 6;
+    ctx.fillRect(b.x, b.y, b.w, b.h);
+    ctx.globalAlpha = 1;
+    ctx.shadowBlur = 0;
+    // Highlight
+    ctx.fillStyle = 'rgba(255,255,255,0.25)';
+    ctx.fillRect(b.x, b.y, b.w, 4);
+  }
+
+  // Paddle
+  ctx.fillStyle = '#00f5ff';
+  ctx.shadowColor = '#00f5ff';
+  ctx.shadowBlur = 10;
+  ctx.fillRect(paddle.x, paddle.y, paddle.w, paddle.h);
+  ctx.shadowBlur = 0;
+
+  // Ball
+  ctx.beginPath();
+  ctx.arc(ball.x, ball.y, ball.r, 0, Math.PI * 2);
+  ctx.fillStyle = '#fff';
+  ctx.shadowColor = '#fff';
+  ctx.shadowBlur = 14;
+  ctx.fill();
+  ctx.shadowBlur = 0;
+}
+
+function endGame() {
+  running = false;
+  cancelAnimationFrame(raf);
+  saveHiScore(score);
+  overlay.innerHTML = `
+    <h1>GAME OVER</h1>
+    <p class="hi">SCORE: ${score.toLocaleString()}</p>
+    <p class="hi">HI-SCORE: ${Math.max(hiScore, score).toLocaleString()}</p>
+    <button id="startBtn">▶ RIGIOCA</button>`;
+  overlay.style.display = 'flex';
+  document.getElementById('startBtn').addEventListener('click', init);
+}
+
+// ── Input ─────────────────────────────────────────────────────────────────
+const keys = {};
+document.addEventListener('keydown', e => {
+  keys[e.key] = true;
+  keys[e.key.toLowerCase()] = true;
+  if (!running) init();
+});
+document.addEventListener('keyup', e => {
+  keys[e.key] = false;
+  keys[e.key.toLowerCase()] = false;
+});
+
+// Mouse
+canvas.addEventListener('mousemove', e => {
+  if (!running) return;
+  const rect = canvas.getBoundingClientRect();
+  const scaleX = W / rect.width;
+  paddle.x = (e.clientX - rect.left) * scaleX - paddle.w / 2;
+});
+
+// Touch paddle on canvas
+canvas.addEventListener('touchmove', e => {
+  if (!running) return;
+  e.preventDefault();
+  const rect = canvas.getBoundingClientRect();
+  const scaleX = W / rect.width;
+  paddle.x = (e.touches[0].clientX - rect.left) * scaleX - paddle.w / 2;
+}, { passive: false });
+
+canvas.addEventListener('touchstart', e => { if (!running) init(); }, { passive: true });
+canvas.addEventListener('click', () => { if (!running) init(); });
+
+// Touch buttons
+function setupBtn(id, dir) {
+  const btn = document.getElementById(id);
+  if (!btn) return;
+  btn.addEventListener('touchstart', e => { e.preventDefault(); touchState[dir] = true; btn.classList.add('pressed'); if (!running) init(); }, { passive: false });
+  btn.addEventListener('touchend',   e => { e.preventDefault(); touchState[dir] = false; btn.classList.remove('pressed'); }, { passive: false });
+  btn.addEventListener('mousedown',  () => { touchState[dir] = true; btn.classList.add('pressed'); });
+  btn.addEventListener('mouseup',    () => { touchState[dir] = false; btn.classList.remove('pressed'); });
+}
+setupBtn('btn-left',  'left');
+setupBtn('btn-right', 'right');
+
+document.getElementById('startBtn').addEventListener('click', init);
+
+// Initial draw
+draw();
+</script>
+</body>
+</html>

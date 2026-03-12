@@ -11,6 +11,9 @@ const GAMES = [
   { id: 6, title: "CYBER PUNCH", genre: "Picchiaduro", platform: "SNES", year: 1993, rating: 4.7, players: "22.8K", badge: "HOT", color: "#ff6a00", desc: "8 lottatori, 3 arene. Il campionato definitivo di lotta cyber da strada.", tags: ["Picchiaduro", "Cyber", "Versus"] },
   { id: 7, title: "MAZE RUNNER 64", genre: "Puzzle", platform: "NES", year: 1988, rating: 3.9, players: "6.6K", badge: null, color: "#00f5ff", desc: "100 labirinti con trappole, fantasmi e passaggi segreti.", tags: ["Puzzle", "Labirinto", "Classico"] },
   { id: 8, title: "THUNDER HAWK", genre: "Sparatutto", platform: "ARCADE", year: 1991, rating: 4.4, players: "9.3K", badge: "HOT", color: "#ff007f", desc: "Caos in elicottero a scorrimento laterale. Distruggi basi nemiche e salva ostaggi.", tags: ["Azione", "Militare", "Retro"] },
+  { id: 9, title: "SNAKE", genre: "Arcade", platform: "ARCADE", year: 1976, rating: 4.3, players: "31.0K", badge: "HOT", color: "#00ff41", desc: "Il classico serpente pixel. Mangia, cresci, sopravvivi. Quanti punti riesci a fare?", tags: ["Arcade", "Classico", "Retro"] },
+  { id: 10, title: "BREAKOUT", genre: "Arcade", platform: "ARCADE", year: 1976, rating: 4.5, players: "18.5K", badge: "CLASSIC", color: "#00f5ff", desc: "Distruggi tutti i mattoni con la pallina. Paddle preciso, riflessi veloci. Classico senza tempo.", tags: ["Arcade", "Palla", "Classico"] },
+  { id: 11, title: "TETRIS", genre: "Puzzle", platform: "GAME BOY", year: 1989, rating: 4.9, players: "55.2K", badge: "HOT", color: "#bf00ff", desc: "Il puzzle più famoso della storia. Incastra i tetromini, elimina le righe, sopravvivi all'accelerazione.", tags: ["Puzzle", "Classico", "Tetromini"] },
 ];
 
 const PLATFORMS = ["TUTTI", "NES", "SNES", "ARCADE"];
@@ -851,7 +854,10 @@ function CommunityPage() {
 }
 
 const GAME_URLS = {
-  1: `${import.meta.env.BASE_URL}neon-blaster.html`, // NEON BLASTER
+  1:  `${import.meta.env.BASE_URL}neon-blaster.html`,
+  9:  `${import.meta.env.BASE_URL}snake.html`,
+  10: `${import.meta.env.BASE_URL}breakout.html`,
+  11: `${import.meta.env.BASE_URL}tetris.html`,
 };
 
 function playGame(game) {
