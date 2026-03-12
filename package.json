@@ -7,7 +7,8 @@
     "build": "vite build",
     "preview": "vite preview",
     "test:mobile": "node test-mobile.cjs",
-    "test:game": "node test-game.cjs"
+    "test:game": "node test-game.cjs",
+    "test:breakout": "node test-breakout.cjs"
   },
   "dependencies": {
     "@neondatabase/serverless": "^1.0.2",

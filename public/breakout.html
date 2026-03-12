@@ -311,6 +311,7 @@ function update() {
 }
 
 function draw() {
+  if (!bricks || !ball || !paddle) return; // non ancora inizializzato
   ctx.fillStyle = '#000';
   ctx.fillRect(0, 0, W, H);
 
