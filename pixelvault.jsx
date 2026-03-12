@@ -450,66 +450,128 @@ const css = `
   .login-wrap {
     min-height: 100vh; display: flex; align-items: center; justify-content: center;
     background: var(--bg);
-    background-image: linear-gradient(var(--cyan) 1px, transparent 1px),
-      linear-gradient(90deg, var(--cyan) 1px, transparent 1px);
-    background-size: 40px 40px; background-attachment: fixed;
-    position: relative;
+    background-image:
+      linear-gradient(rgba(0,245,255,0.06) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(0,245,255,0.06) 1px, transparent 1px);
+    background-size: 48px 48px; background-attachment: fixed;
+    position: relative; overflow: hidden;
   }
   .login-wrap::before {
     content: ''; position: fixed; inset: 0; pointer-events: none;
-    background: radial-gradient(ellipse at center, rgba(6,6,15,0.7) 30%, rgba(6,6,15,0.97) 100%);
+    background: radial-gradient(ellipse at 50% 40%, rgba(0,245,255,0.06) 0%, rgba(6,6,15,0.96) 65%);
     z-index: 0;
+  }
+  .login-wrap::after {
+    content: 'PIXEL VAULT  ·  INSERT COIN  ·  PIXEL VAULT  ·  INSERT COIN  ·  PIXEL VAULT  ·  INSERT COIN  ·  PIXEL VAULT  ·  INSERT COIN  ·';
+    position: fixed; bottom: 28px; left: 0; right: 0;
+    font-family: 'Press Start 2P'; font-size: 9px; color: rgba(0,245,255,0.18);
+    text-align: center; letter-spacing: 3px; pointer-events: none; z-index: 0;
   }
   .login-box {
     position: relative; z-index: 1;
-    background: var(--bg2); border: 1px solid var(--cyan);
-    width: 380px; max-width: 95vw;
-    box-shadow: 0 0 60px rgba(0,245,255,0.18), 0 0 120px rgba(0,245,255,0.06);
-    animation: slide-up .35s ease;
+    background: rgba(10,10,26,0.97);
+    border: 1px solid rgba(0,245,255,0.35);
+    width: 420px; max-width: 96vw;
+    box-shadow:
+      0 0 0 1px rgba(0,245,255,0.08),
+      0 0 40px rgba(0,245,255,0.14),
+      0 0 100px rgba(0,245,255,0.05),
+      inset 0 1px 0 rgba(0,245,255,0.12);
+    animation: slide-up .4s cubic-bezier(.22,1,.36,1);
   }
   .login-header {
-    padding: 28px 28px 20px; border-bottom: 1px solid var(--border);
-    text-align: center;
+    padding: 32px 32px 0; text-align: center;
   }
   .login-logo {
-    font-family: 'Press Start 2P'; font-size: 16px;
-    background: linear-gradient(90deg, var(--cyan), var(--pink));
+    font-family: 'Press Start 2P'; font-size: 18px;
+    background: linear-gradient(90deg, var(--cyan) 0%, var(--pink) 60%, var(--yellow) 100%);
     -webkit-background-clip: text; -webkit-text-fill-color: transparent;
     animation: glow-pulse 3s ease-in-out infinite;
-    display: block; margin-bottom: 10px;
+    display: block; margin-bottom: 6px; letter-spacing: 2px;
   }
-  .login-sub { font-size: 16px; color: var(--dim); letter-spacing: 2px; }
-  .login-body { padding: 28px; display: flex; flex-direction: column; gap: 18px; }
-  .login-field { display: flex; flex-direction: column; gap: 6px; }
+  .login-tagline {
+    font-family: 'VT323'; font-size: 17px; color: var(--dim);
+    letter-spacing: 3px; margin-bottom: 24px; display: block;
+  }
+  /* TABS */
+  .login-tabs {
+    display: flex; border-bottom: 1px solid rgba(0,245,255,0.15);
+    margin: 0 -0px; position: relative;
+  }
+  .login-tab {
+    flex: 1; padding: 13px 0; font-family: 'Press Start 2P'; font-size: 8px;
+    background: none; border: none; cursor: pointer; letter-spacing: 1px;
+    color: var(--dim); transition: color .2s; position: relative;
+  }
+  .login-tab.active { color: var(--cyan); }
+  .login-tab::after {
+    content: ''; position: absolute; bottom: -1px; left: 10%; right: 10%; height: 2px;
+    background: var(--cyan); transform: scaleX(0); transition: transform .25s ease;
+    box-shadow: 0 0 8px var(--cyan);
+  }
+  .login-tab.active::after { transform: scaleX(1); }
+  /* BODY */
+  .login-body { padding: 28px 32px 32px; display: flex; flex-direction: column; gap: 18px; }
+  .login-field { display: flex; flex-direction: column; gap: 7px; }
+  .login-label-row { display: flex; justify-content: space-between; align-items: center; }
   .login-label {
-    font-family: 'Press Start 2P'; font-size: 7px; color: var(--dim);
+    font-family: 'Press Start 2P'; font-size: 7px; color: rgba(0,245,255,0.6);
     letter-spacing: 2px;
   }
+  .login-char-count { font-family: 'VT323'; font-size: 14px; color: var(--dim); }
   .login-input {
-    background: var(--bg3); border: 1px solid var(--border); color: var(--text);
-    font-family: 'VT323'; font-size: 20px; padding: 10px 14px;
-    outline: none; transition: border-color .2s, box-shadow .2s;
-    caret-color: var(--cyan);
+    background: rgba(0,245,255,0.03); border: 1px solid rgba(0,245,255,0.18);
+    color: var(--text); font-family: 'VT323'; font-size: 22px; padding: 11px 16px;
+    outline: none; transition: border-color .2s, box-shadow .2s, background .2s;
+    caret-color: var(--cyan); letter-spacing: 1px;
   }
-  .login-input:focus { border-color: var(--cyan); box-shadow: 0 0 10px rgba(0,245,255,0.15); }
-  .login-input::placeholder { color: var(--dim); }
+  .login-input:focus {
+    border-color: var(--cyan); background: rgba(0,245,255,0.06);
+    box-shadow: 0 0 14px rgba(0,245,255,0.12), inset 0 0 8px rgba(0,245,255,0.04);
+  }
+  .login-input::placeholder { color: rgba(0,245,255,0.2); }
+  /* PASSWORD STRENGTH */
+  .pw-strength { display: flex; gap: 4px; margin-top: 4px; }
+  .pw-bar { flex: 1; height: 3px; background: rgba(255,255,255,0.08); transition: background .3s; }
+  .pw-bar.s1 { background: var(--pink); box-shadow: 0 0 6px var(--pink); }
+  .pw-bar.s2 { background: var(--yellow); box-shadow: 0 0 6px var(--yellow); }
+  .pw-bar.s3 { background: var(--green); box-shadow: 0 0 6px var(--green); }
+  /* BUTTONS */
   .login-btn {
     font-family: 'Press Start 2P'; font-size: 10px;
-    background: var(--cyan); color: #000; border: none;
-    padding: 14px; cursor: pointer; width: 100%;
-    box-shadow: 4px 4px 0 rgba(0,0,0,0.5), 0 0 20px rgba(0,245,255,0.4);
-    transition: all .15s; letter-spacing: 1px;
-    clip-path: polygon(0 0, calc(100% - 8px) 0, 100% 8px, 100% 100%, 8px 100%, 0 calc(100% - 8px));
+    background: linear-gradient(135deg, var(--cyan) 0%, #00b8d4 100%);
+    color: #000; border: none; padding: 15px; cursor: pointer; width: 100%;
+    box-shadow: 4px 4px 0 rgba(0,0,0,0.6), 0 0 24px rgba(0,245,255,0.35);
+    transition: all .15s; letter-spacing: 2px;
+    clip-path: polygon(0 0, calc(100% - 10px) 0, 100% 10px, 100% 100%, 10px 100%, 0 calc(100% - 10px));
+    margin-top: 4px;
   }
-  .login-btn:hover { transform: translate(-2px,-2px); box-shadow: 6px 6px 0 rgba(0,0,0,0.5), 0 0 30px rgba(0,245,255,0.6); }
-  .login-btn:disabled { opacity: .5; cursor: not-allowed; transform: none; }
+  .login-btn:hover:not(:disabled) {
+    transform: translate(-2px,-2px);
+    box-shadow: 6px 6px 0 rgba(0,0,0,0.6), 0 0 36px rgba(0,245,255,0.55);
+  }
+  .login-btn.register { background: linear-gradient(135deg, var(--pink) 0%, #c0006a 100%); box-shadow: 4px 4px 0 rgba(0,0,0,0.6), 0 0 24px rgba(255,0,127,0.35); }
+  .login-btn.register:hover:not(:disabled) { box-shadow: 6px 6px 0 rgba(0,0,0,0.6), 0 0 36px rgba(255,0,127,0.55); }
+  .login-btn:disabled { opacity: .45; cursor: not-allowed; transform: none; }
+  /* MESSAGES */
   .login-error {
-    font-family: 'Press Start 2P'; font-size: 8px; color: var(--pink);
-    text-align: center; text-shadow: 0 0 8px var(--pink);
+    font-family: 'Press Start 2P'; font-size: 7px; color: var(--pink);
+    text-align: center; text-shadow: 0 0 10px var(--pink);
+    padding: 10px 12px; background: rgba(255,0,127,0.07);
+    border: 1px solid rgba(255,0,127,0.2);
     animation: blink .4s ease 2;
   }
-  .login-hint { font-size: 15px; color: var(--dim); text-align: center; }
-  .login-hint span { color: var(--cyan); }
+  .login-success {
+    font-family: 'Press Start 2P'; font-size: 7px; color: var(--green);
+    text-align: center; text-shadow: 0 0 10px var(--green);
+    padding: 10px 12px; background: rgba(0,255,106,0.07);
+    border: 1px solid rgba(0,255,106,0.2);
+  }
+  .login-hint {
+    font-family: 'VT323'; font-size: 16px; color: var(--dim);
+    text-align: center; letter-spacing: 1px;
+  }
+  .login-hint span { color: var(--cyan); cursor: default; }
 
   /* USER DROPDOWN */
   .user-menu { position: relative; }
@@ -798,39 +860,74 @@ function playGame(game) {
   }
 }
 
-// Demo credentials
-const USERS = [
-  { username: "PIXEL_KING", password: "retro123" },
-  { username: "PLAYER1", password: "1234" },
-];
-
 // --- Login Page ---
+function pwStrength(pw) {
+  if (!pw) return 0;
+  if (pw.length < 4) return 1;
+  if (pw.length < 8 || !/[^a-zA-Z0-9]/.test(pw)) return 2;
+  return 3;
+}
+
 function LoginPage({ onLogin }) {
+  const [tab, setTab] = useState("login"); // "login" | "register"
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
+  const [success, setSuccess] = useState("");
   const [loading, setLoading] = useState(false);
 
-  const handleSubmit = (e) => {
+  const switchTab = (t) => {
+    setTab(t); setError(""); setSuccess(""); setUsername(""); setPassword("");
+  };
+
+  const handleLogin = async (e) => {
     e.preventDefault();
-    setError("");
+    setError(""); setSuccess("");
     if (!username.trim() || !password.trim()) {
-      setError("INSERISCI NOME UTENTE E PASSWORD");
-      return;
+      setError("INSERISCI NOME UTENTE E PASSWORD"); return;
     }
     setLoading(true);
-    setTimeout(() => {
-      const match = USERS.find(
-        u => u.username.toLowerCase() === username.trim().toLowerCase() && u.password === password
-      );
-      if (match) {
-        onLogin(match.username.toUpperCase());
-      } else {
-        setError("CREDENZIALI NON VALIDE — RIPROVA");
-        setLoading(false);
-      }
-    }, 600);
+    try {
+      const res = await fetch("/api/login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ username: username.trim(), password }),
+      });
+      const data = await res.json();
+      if (!res.ok) { setError(data.error || "ERRORE"); setLoading(false); return; }
+      onLogin(data.username);
+    } catch {
+      setError("CONNESSIONE FALLITA — RIPROVA");
+      setLoading(false);
+    }
   };
+
+  const handleRegister = async (e) => {
+    e.preventDefault();
+    setError(""); setSuccess("");
+    if (!username.trim() || !password.trim()) {
+      setError("COMPILA TUTTI I CAMPI"); return;
+    }
+    setLoading(true);
+    try {
+      const res = await fetch("/api/register", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ username: username.trim(), password }),
+      });
+      const data = await res.json();
+      if (!res.ok) { setError(data.error || "ERRORE"); setLoading(false); return; }
+      setSuccess(`✓ ACCOUNT CREATO! BENVENUTO, ${data.username}`);
+      setLoading(false);
+      setTimeout(() => onLogin(data.username), 1200);
+    } catch {
+      setError("CONNESSIONE FALLITA — RIPROVA");
+      setLoading(false);
+    }
+  };
+
+  const strength = pwStrength(password);
+  const isRegister = tab === "register";
 
   return (
     <div className="login-wrap">
@@ -838,37 +935,65 @@ function LoginPage({ onLogin }) {
       <div className="login-box">
         <div className="login-header">
           <span className="login-logo">PIXEL VAULT</span>
-          <div className="login-sub">INSERISCI LE CREDENZIALI PER GIOCARE</div>
+          <span className="login-tagline">// RETRO GAME STORE //</span>
+          <div className="login-tabs">
+            <button type="button" className={`login-tab${tab === "login" ? " active" : ""}`} onClick={() => switchTab("login")}>
+              ▶ ACCEDI
+            </button>
+            <button type="button" className={`login-tab${tab === "register" ? " active" : ""}`} onClick={() => switchTab("register")}>
+              ＋ REGISTRATI
+            </button>
+          </div>
         </div>
-        <form className="login-body" onSubmit={handleSubmit}>
+
+        <form className="login-body" onSubmit={isRegister ? handleRegister : handleLogin}>
           <div className="login-field">
-            <label className="login-label">NOME UTENTE</label>
+            <div className="login-label-row">
+              <label className="login-label">NOME UTENTE</label>
+              {isRegister && <span className="login-char-count">{username.length}/20</span>}
+            </div>
             <input
               className="login-input"
               type="text"
-              placeholder="INSERISCI NOME UTENTE..."
+              placeholder={isRegister ? "SCEGLI UN NOME..." : "INSERISCI NOME..."}
               value={username}
-              onChange={e => setUsername(e.target.value)}
+              onChange={e => setUsername(e.target.value.slice(0, 20))}
               autoFocus
+              autoComplete="username"
             />
           </div>
+
           <div className="login-field">
             <label className="login-label">PASSWORD</label>
             <input
               className="login-input"
               type="password"
-              placeholder="••••••••"
+              placeholder={isRegister ? "MIN. 4 CARATTERI" : "••••••••"}
               value={password}
               onChange={e => setPassword(e.target.value)}
+              autoComplete={isRegister ? "new-password" : "current-password"}
             />
+            {isRegister && password.length > 0 && (
+              <div className="pw-strength">
+                <div className={`pw-bar${strength >= 1 ? ` s${strength}` : ""}`} />
+                <div className={`pw-bar${strength >= 2 ? ` s${strength}` : ""}`} />
+                <div className={`pw-bar${strength >= 3 ? ` s${strength}` : ""}`} />
+              </div>
+            )}
           </div>
+
           {error && <div className="login-error">⚠ {error}</div>}
-          <button className="login-btn" type="submit" disabled={loading}>
-            {loading ? "CARICAMENTO..." : "▶ PREMI START"}
+          {success && <div className="login-success">{success}</div>}
+
+          <button className={`login-btn${isRegister ? " register" : ""}`} type="submit" disabled={loading}>
+            {loading ? "CARICAMENTO..." : isRegister ? "＋ CREA ACCOUNT" : "▶ PREMI START"}
           </button>
-          <div className="login-hint">
-            Prova <span>PIXEL_KING</span> / <span>retro123</span>
-          </div>
+
+          {!isRegister && (
+            <div className="login-hint">
+              Demo: <span>PIXEL_KING</span> / <span>retro123</span>
+            </div>
+          )}
         </form>
       </div>
     </div>
