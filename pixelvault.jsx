@@ -14,9 +14,10 @@ const GAMES = [
   { id: 9, title: "SNAKE", genre: "Arcade", platform: "ARCADE", year: 1976, rating: 4.3, players: "31.0K", badge: "HOT", color: "#00ff41", desc: "Il classico serpente pixel. Mangia, cresci, sopravvivi. Quanti punti riesci a fare?", tags: ["Arcade", "Classico", "Retro"] },
   { id: 10, title: "BREAKOUT", genre: "Arcade", platform: "ARCADE", year: 1976, rating: 4.5, players: "18.5K", badge: "CLASSIC", color: "#00f5ff", desc: "Distruggi tutti i mattoni con la pallina. Paddle preciso, riflessi veloci. Classico senza tempo.", tags: ["Arcade", "Palla", "Classico"] },
   { id: 11, title: "TETRIS", genre: "Puzzle", platform: "GAME BOY", year: 1989, rating: 4.9, players: "55.2K", badge: "HOT", color: "#bf00ff", desc: "Il puzzle più famoso della storia. Incastra i tetromini, elimina le righe, sopravvivi all'accelerazione.", tags: ["Puzzle", "Classico", "Tetromini"] },
+  { id: 12, title: "CHESS", genre: "Strategia", platform: "ONLINE", year: 1997, rating: 4.6, players: "7.2K", badge: "NUOVO", color: "#ffe600", desc: "Scacchi multiplayer in tempo reale. Crea una stanza, condividi il codice con un amico e sfidalo.", tags: ["Strategia", "Multiplayer", "Online"] },
 ];
 
-const PLATFORMS = ["TUTTI", "NES", "SNES", "ARCADE"];
+const PLATFORMS = ["TUTTI", "NES", "SNES", "ARCADE", "ONLINE"];
 const GENRES = ["TUTTI", "Sparatutto", "GDR", "Corsa", "Piattaforme", "Picchiaduro", "Strategia", "Puzzle"];
 
 const BADGE_COLORS = {
@@ -824,6 +825,7 @@ const GAME_URLS = {
   9:  `${import.meta.env.BASE_URL}snake.html`,
   10: `${import.meta.env.BASE_URL}breakout.html`,
   11: `${import.meta.env.BASE_URL}tetris.html`,
+  12: `${import.meta.env.BASE_URL}chess.html`,
 };
 
 function playGame(game) {
