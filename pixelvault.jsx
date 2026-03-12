@@ -623,7 +623,7 @@ function PixelArt({ game, size = "large" }) {
 }
 
 // --- Store Page ---
-function StorePage({ onAddToLibrary, library, onOpenGame }) {
+function StorePage({ onOpenGame }) {
   const [platform, setPlatform] = useState("TUTTI");
   const [genre, setGenre] = useState("TUTTI");
   const [sort, setSort] = useState("popular");
@@ -658,8 +658,8 @@ function StorePage({ onAddToLibrary, library, onOpenGame }) {
             <div className="hero-title">{heroGame.title}</div>
             <div className="hero-desc">{heroGame.desc}</div>
             <div className="hero-actions">
-              <button className="btn-primary" onClick={() => GAME_URLS[heroGame.id] ? playGame(heroGame) : onAddToLibrary(heroGame)}>
-                {GAME_URLS[heroGame.id] ? "▶ GIOCA ORA" : "＋ AGGIUNGI ALLA LIBRERIA"}
+              <button className="btn-primary" onClick={() => playGame(heroGame)} style={!GAME_URLS[heroGame.id] ? { opacity: 0.4, cursor: "not-allowed" } : {}}>
+                {GAME_URLS[heroGame.id] ? "▶ GIOCA ORA" : "⏳ PRESTO DISPONIBILE"}
               </button>
               <button className="btn-secondary" onClick={() => onOpenGame(heroGame)}>VEDI DETTAGLI</button>
               <span className="hero-price" style={{ color: "var(--green)", fontSize: 14 }}>GRATIS</span>
@@ -731,8 +731,8 @@ function StorePage({ onAddToLibrary, library, onOpenGame }) {
                     <div className="badge" style={{ background: BADGE_COLORS[g.badge], color: g.badge === "SALE" ? "#000" : "#fff" }}>{g.badge}</div>
                   )}
                   <div className="card-overlay">
-                    <button className="overlay-btn buy" onClick={e => { e.stopPropagation(); GAME_URLS[g.id] ? playGame(g) : onAddToLibrary(g); }}>
-                      {GAME_URLS[g.id] ? "▶ GIOCA" : "+ GRATIS"}
+                    <button className="overlay-btn buy" onClick={e => { e.stopPropagation(); playGame(g); }} style={!GAME_URLS[g.id] ? { opacity: 0.4, cursor: "not-allowed" } : {}}>
+                      {GAME_URLS[g.id] ? "▶ GIOCA" : "PRESTO"}
                     </button>
                     <button className="overlay-btn wish" onClick={e => e.stopPropagation()}>♥</button>
                   </div>
@@ -759,40 +759,6 @@ function StorePage({ onAddToLibrary, library, onOpenGame }) {
         </div>
       </div>
     </>
-  );
-}
-
-// --- Library Page ---
-function LibraryPage({ library }) {
-  const owned = GAMES.filter(g => library.includes(g.id));
-  const times = { 1: "12h 34m", 2: "3h 10m", 3: "48h 02m", 4: "7h 55m", 5: "1h 20m", 6: "0h 30m", 7: "5h 14m", 8: "2h 05m" };
-  return (
-    <div className="library">
-      <div className="library-header">
-        <div className="lib-title">LA MIA LIBRERIA</div>
-        <div className="lib-sub">{owned.length} giochi · tutti gratis</div>
-      </div>
-      {owned.length === 0 ? (
-        <div style={{ textAlign: "center", color: "var(--dim)", fontFamily: "'Press Start 2P'", fontSize: 10, padding: "60px 0" }}>
-          NESSUN GIOCO ANCORA<br/><br/>
-          <span style={{ fontSize: 14 }}>Aggiungi giochi gratis dallo store!</span>
-        </div>
-      ) : (
-        <div className="lib-grid">
-          {owned.map((g) => (
-            <div key={g.id} className="lib-card">
-              <div className="lib-thumb"><PixelArt game={g} size="small" /></div>
-              <div className="lib-info">
-                <div className="lib-name">{g.title}</div>
-                <div className="lib-genre">{g.genre} · {g.platform}</div>
-                <div className="lib-time">⏱ {times[g.id]} giocato</div>
-              </div>
-              <button className="play-btn" onClick={() => playGame(g)} style={!GAME_URLS[g.id] ? { opacity: 0.4, cursor: "not-allowed" } : {}}>▶ GIOCA</button>
-            </div>
-          ))}
-        </div>
-      )}
-    </div>
   );
 }
 
@@ -1019,21 +985,8 @@ export default function App() {
     setUser(null);
   };
   const [page, setPage] = useState("store");
-  const [library, setLibrary] = useState([1, 2]); // some games already in library by default
   const [modal, setModal] = useState(null);
-  const [toast, setToast] = useState(null);
   const [showUserMenu, setShowUserMenu] = useState(false);
-
-  const addToLibrary = (game) => {
-    if (!library.includes(game.id)) {
-      setLibrary(l => [...l, game.id]);
-      setToast(`${game.title} aggiunto alla libreria!`);
-      setTimeout(() => setToast(null), 2500);
-    } else {
-      setToast(`Già nella tua libreria!`);
-      setTimeout(() => setToast(null), 2000);
-    }
-  };
 
   if (!user) return (
     <>
@@ -1051,23 +1004,18 @@ export default function App() {
         <nav className="nav">
           <div className="nav-logo" onClick={() => setPage("store")}>PIXEL VAULT</div>
           <div className="nav-links">
-            {[["store","NEGOZIO"], ["library","LIBRERIA"], ["community","COMUNITÀ"]].map(([p, label]) => (
+            {[["store","NEGOZIO"], ["community","COMUNITÀ"]].map(([p, label]) => (
               <button key={p} className={`nav-link${page === p ? " active" : ""}`} onClick={() => setPage(p)}>
                 {label}
               </button>
             ))}
           </div>
           <div className="nav-right">
-            <button className="cart-btn" onClick={() => setPage("library")}>
-              📁 LIBRERIA
-              {library.length > 0 && <span className="cart-badge">{library.length}</span>}
-            </button>
             <div className="user-menu">
               <div className="avatar" onClick={() => setShowUserMenu(m => !m)}>👾</div>
               {showUserMenu && (
                 <div className="user-dropdown" onMouseLeave={() => setShowUserMenu(false)}>
                   <div className="user-dropdown-name">{user}</div>
-                  <button className="user-dropdown-item" onClick={() => { setPage("library"); setShowUserMenu(false); }}>LA MIA LIBRERIA</button>
                   <button className="user-dropdown-item" onClick={() => { handleLogout(); setShowUserMenu(false); setPage("store"); }}>ESCI</button>
                 </div>
               )}
@@ -1086,8 +1034,7 @@ export default function App() {
           </div>
         </div>
 
-        {page === "store" && <StorePage onAddToLibrary={addToLibrary} library={library} onOpenGame={setModal} />}
-        {page === "library" && <LibraryPage library={library} />}
+        {page === "store" && <StorePage onOpenGame={setModal} />}
         {page === "community" && <CommunityPage />}
 
         <footer className="footer">
@@ -1133,8 +1080,8 @@ export default function App() {
                 </div>
               </div>
               <div className="modal-footer">
-                <button className="btn-primary" onClick={() => { if (GAME_URLS[modal.id]) { playGame(modal); setModal(null); } else { addToLibrary(modal); setModal(null); } }}>
-                  {GAME_URLS[modal.id] ? "▶ GIOCA ORA" : "＋ AGGIUNGI ALLA LIBRERIA"}
+                <button className="btn-primary" onClick={() => { if (GAME_URLS[modal.id]) { playGame(modal); setModal(null); } }} style={!GAME_URLS[modal.id] ? { opacity: 0.4, cursor: "not-allowed" } : {}}>
+                  {GAME_URLS[modal.id] ? "▶ GIOCA ORA" : "⏳ PRESTO DISPONIBILE"}
                 </button>
                 <button className="btn-secondary" onClick={() => setModal(null)}>CHIUDI</button>
               </div>
@@ -1143,7 +1090,6 @@ export default function App() {
         </div>
       )}
 
-      {toast && <div className="toast">✓ {toast}</div>}
     </>
   );
 }
