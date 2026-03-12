@@ -789,7 +789,7 @@ function CommunityPage() {
 }
 
 const GAME_URLS = {
-  1: "/neon-blaster.html", // NEON BLASTER
+  1: `${import.meta.env.BASE_URL}neon-blaster.html`, // NEON BLASTER
 };
 
 function playGame(game) {
