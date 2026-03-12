@@ -124,6 +124,34 @@ let livesEl = document.getElementById('lives-display');
 let hiEl    = document.getElementById('hi-display');
 let hiScore = 0;
 
+// ── Record utente via API ───────────────────────────────────────────────
+const currentUser = localStorage.getItem('pv_user') || null;
+
+async function loadHiScore() {
+  if (!currentUser) return;
+  try {
+    const res  = await fetch(`/api/score?username=${encodeURIComponent(currentUser)}`);
+    const data = await res.json();
+    if (data.high_score > hiScore) {
+      hiScore = data.high_score;
+      if (hiEl) hiEl.textContent = hiScore.toLocaleString();
+    }
+  } catch (e) {}
+}
+
+async function saveHiScore(score) {
+  if (!currentUser || score <= 0) return;
+  try {
+    await fetch('/api/score', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ username: currentUser, score }),
+    });
+  } catch (e) {}
+}
+
+loadHiScore();
+
 // Touch state (read by GameScene.update)
 const touchState = { left: false, right: false, fire: false };
 
@@ -518,7 +546,10 @@ class GameScene extends Phaser.Scene {
     this.gameOver = true;
     this.physics.pause();
     this.enemyShootTimer.remove();
-    if (this.score > hiScore) hiScore = this.score;
+    if (this.score > hiScore) {
+      hiScore = this.score;
+      saveHiScore(this.score);
+    }
     this.time.delayedCall(1000, () => this.scene.start('GameOver', { score: this.score, level: this.level }));
   }
 

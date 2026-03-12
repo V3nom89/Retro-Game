@@ -1003,6 +1003,15 @@ function LoginPage({ onLogin }) {
 // --- Main App ---
 export default function App() {
   const [user, setUser] = useState(null);
+
+  const handleLogin = (username) => {
+    localStorage.setItem("pv_user", username);
+    setUser(username);
+  };
+  const handleLogout = () => {
+    localStorage.removeItem("pv_user");
+    setUser(null);
+  };
   const [page, setPage] = useState("store");
   const [library, setLibrary] = useState([1, 2]); // some games already in library by default
   const [modal, setModal] = useState(null);
@@ -1023,7 +1032,7 @@ export default function App() {
   if (!user) return (
     <>
       <style>{css}</style>
-      <LoginPage onLogin={setUser} />
+      <LoginPage onLogin={handleLogin} />
     </>
   );
 
@@ -1053,7 +1062,7 @@ export default function App() {
                 <div className="user-dropdown" onMouseLeave={() => setShowUserMenu(false)}>
                   <div className="user-dropdown-name">{user}</div>
                   <button className="user-dropdown-item" onClick={() => { setPage("library"); setShowUserMenu(false); }}>LA MIA LIBRERIA</button>
-                  <button className="user-dropdown-item" onClick={() => { setUser(null); setShowUserMenu(false); setPage("store"); }}>ESCI</button>
+                  <button className="user-dropdown-item" onClick={() => { handleLogout(); setShowUserMenu(false); setPage("store"); }}>ESCI</button>
                 </div>
               )}
             </div>
