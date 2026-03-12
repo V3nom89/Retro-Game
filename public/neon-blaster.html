@@ -2,7 +2,7 @@
 <html lang="it">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
 <title>NEON BLASTER — PixelVault Demo</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/phaser/3.60.0/phaser.min.js"></script>
 <style>
@@ -14,7 +14,8 @@
     align-items: center; justify-content: center;
     min-height: 100vh;
     font-family: 'Press Start 2P', monospace;
-    overflow-x: hidden;
+    overflow: hidden;
+    touch-action: none;
   }
   #game-wrapper {
     position: relative;
@@ -27,7 +28,7 @@
     background: repeating-linear-gradient(0deg, transparent, transparent 3px, rgba(0,0,0,0.1) 3px, rgba(0,0,0,0.1) 4px);
   }
   #ui-bar {
-    width: 480px; padding: 8px 16px;
+    padding: 8px 16px;
     background: #080814; border: 1px solid #00f5ff;
     border-top: none; display: flex; justify-content: space-between; align-items: center;
     box-shadow: 0 4px 20px rgba(0,245,255,0.2);
@@ -39,8 +40,60 @@
     background: #0b0b1a; border: 1px solid #44446a; color: #44446a;
     font-family: 'Press Start 2P'; font-size: 8px; padding: 8px 12px; cursor: pointer;
     transition: all .2s; z-index: 100;
+    -webkit-tap-highlight-color: transparent;
   }
-  #back-btn:hover { border-color: #00f5ff; color: #00f5ff; }
+  #back-btn:hover, #back-btn:active { border-color: #00f5ff; color: #00f5ff; }
+
+  /* ── TOUCH CONTROLS ── */
+  #touch-controls {
+    display: none;
+    position: absolute; bottom: 0; left: 0; right: 0;
+    height: 120px;
+    padding: 12px 18px;
+    background: linear-gradient(transparent, rgba(4,4,14,0.9) 60%);
+    justify-content: space-between; align-items: flex-end;
+    z-index: 20;
+  }
+  @media (hover: none) and (pointer: coarse) {
+    #touch-controls { display: flex; }
+    body { justify-content: flex-start; padding-top: 10px; }
+    #back-btn { font-size: 7px; padding: 7px 10px; top: 10px; left: 10px; }
+  }
+  .joy-pad { display: flex; gap: 10px; align-items: center; }
+  .joy-btn {
+    width: 68px; height: 68px;
+    background: rgba(0,245,255,0.07);
+    border: 2px solid rgba(0,245,255,0.35);
+    color: #00f5ff; font-size: 26px;
+    display: flex; align-items: center; justify-content: center;
+    border-radius: 6px; cursor: pointer;
+    -webkit-tap-highlight-color: transparent;
+    user-select: none;
+    transition: background .08s, border-color .08s, box-shadow .08s;
+  }
+  .joy-btn.pressed {
+    background: rgba(0,245,255,0.22);
+    border-color: #00f5ff;
+    box-shadow: 0 0 14px rgba(0,245,255,0.5);
+  }
+  #fire-btn-touch {
+    width: 84px; height: 84px;
+    background: rgba(255,0,127,0.1);
+    border: 2px solid rgba(255,0,127,0.45);
+    border-radius: 50%;
+    color: #ff007f; font-family: 'Press Start 2P'; font-size: 9px;
+    display: flex; align-items: center; justify-content: center;
+    text-align: center; line-height: 1.4;
+    cursor: pointer;
+    -webkit-tap-highlight-color: transparent;
+    user-select: none;
+    transition: background .08s, border-color .08s, box-shadow .08s;
+  }
+  #fire-btn-touch.pressed {
+    background: rgba(255,0,127,0.3);
+    border-color: #ff007f;
+    box-shadow: 0 0 18px rgba(255,0,127,0.6);
+  }
 </style>
 </head>
 <body>
@@ -50,6 +103,13 @@
 <div id="game-wrapper">
   <canvas id="phaser-game"></canvas>
   <div class="scanlines"></div>
+  <div id="touch-controls">
+    <div class="joy-pad">
+      <div class="joy-btn" id="btn-left">◄</div>
+      <div class="joy-btn" id="btn-right">►</div>
+    </div>
+    <div id="fire-btn-touch">FIRE</div>
+  </div>
 </div>
 <div id="ui-bar">
   <div class="ui-item">SCORE: <span id="score-display">0</span></div>
@@ -63,21 +123,37 @@ const W = 480, H = 540;
 let scoreEl = document.getElementById('score-display');
 let levelEl = document.getElementById('level-display');
 let livesEl = document.getElementById('lives-display');
-let hiEl = document.getElementById('hi-display');
+let hiEl    = document.getElementById('hi-display');
 let hiScore = 0;
 
-// Audio context for 8-bit sounds
+// Touch state (read by GameScene.update)
+const touchState = { left: false, right: false, fire: false };
+
+// ── Responsive scaling ──────────────────────────────────────────────────
+function resizeGame() {
+  const maxW    = Math.min(W, window.innerWidth - 4);
+  const scale   = maxW / W;
+  const scaledH = Math.round(H * scale);
+  const wrapper = document.getElementById('game-wrapper');
+  const canvas  = document.getElementById('phaser-game');
+  const uiBar   = document.getElementById('ui-bar');
+  if (wrapper) wrapper.style.width = maxW + 'px';
+  if (canvas)  { canvas.style.width = maxW + 'px'; canvas.style.height = scaledH + 'px'; }
+  if (uiBar)   uiBar.style.width = maxW + 'px';
+}
+window.addEventListener('resize', resizeGame);
+
+// ── Audio ───────────────────────────────────────────────────────────────
 const AudioCtx = window.AudioContext || window.webkitAudioContext;
 let audioCtx;
 
 function initAudio() {
   if (!audioCtx) audioCtx = new AudioCtx();
 }
-
 function playSound(freq, type, duration, vol = 0.3) {
   if (!audioCtx) return;
   try {
-    const osc = audioCtx.createOscillator();
+    const osc  = audioCtx.createOscillator();
     const gain = audioCtx.createGain();
     osc.connect(gain); gain.connect(audioCtx.destination);
     osc.type = type;
@@ -89,26 +165,20 @@ function playSound(freq, type, duration, vol = 0.3) {
     osc.stop(audioCtx.currentTime + duration);
   } catch(e) {}
 }
-
-function playShoot() { playSound(880, 'square', 0.08, 0.2); }
-function playExplosion() { playSound(150, 'sawtooth', 0.3, 0.4); }
-function playPowerup() { playSound(440, 'sine', 0.4, 0.3); playSound(660, 'sine', 0.4, 0.3); }
-function playHit() { playSound(200, 'square', 0.15, 0.3); }
+function playShoot()     { playSound(880, 'square',  0.08, 0.2); }
+function playExplosion() { playSound(150, 'sawtooth', 0.3,  0.4); }
+function playPowerup()   { playSound(440, 'sine', 0.4, 0.3); playSound(660, 'sine', 0.4, 0.3); }
+function playHit()       { playSound(200, 'square',  0.15, 0.3); }
 
 // ===================== SCENES =====================
 
 class BootScene extends Phaser.Scene {
   constructor() { super('Boot'); }
-  create() {
-    // Generate all textures procedurally
-    this.generateTextures();
-    this.scene.start('Menu');
-  }
+  create() { this.generateTextures(); this.scene.start('Menu'); }
 
   generateTextures() {
     const g = this.make.graphics({ add: false });
 
-    // Player ship (cyan triangle spaceship)
     g.clear();
     g.fillStyle(0x00f5ff); g.fillTriangle(16, 0, 0, 30, 32, 30);
     g.fillStyle(0x004466); g.fillRect(10, 20, 12, 12);
@@ -117,14 +187,12 @@ class BootScene extends Phaser.Scene {
     g.fillStyle(0x00f5ff, 0.5); g.fillTriangle(24, 28, 20, 36, 28, 36);
     g.generateTexture('player', 32, 36);
 
-    // Enemy basic (red diamond)
     g.clear();
     g.fillStyle(0xff0044); g.fillTriangle(12, 0, 0, 16, 24, 16);
     g.fillStyle(0xff4444); g.fillTriangle(12, 4, 4, 14, 20, 14);
     g.fillStyle(0xff6666); g.fillRect(10, 8, 4, 4);
     g.generateTexture('enemy1', 24, 20);
 
-    // Enemy tough (purple)
     g.clear();
     g.fillStyle(0x8800cc); g.fillRect(4, 0, 24, 8);
     g.fillStyle(0xaa00ff); g.fillRect(0, 8, 32, 12);
@@ -132,7 +200,6 @@ class BootScene extends Phaser.Scene {
     g.fillStyle(0xffaaff); g.fillRect(13, 10, 6, 4);
     g.generateTexture('enemy2', 32, 20);
 
-    // Enemy boss (big orange)
     g.clear();
     g.fillStyle(0xff4400); g.fillRect(0, 10, 64, 20);
     g.fillStyle(0xff6600); g.fillRect(8, 0, 48, 30);
@@ -142,30 +209,25 @@ class BootScene extends Phaser.Scene {
     g.fillStyle(0xff2200); g.fillRect(4, 14, 8, 8); g.fillRect(52, 14, 8, 8);
     g.generateTexture('boss', 64, 32);
 
-    // Bullet player
     g.clear();
     g.fillStyle(0x00f5ff); g.fillRect(1, 0, 4, 12);
     g.fillStyle(0xffffff); g.fillRect(2, 0, 2, 6);
     g.generateTexture('bullet', 6, 12);
 
-    // Bullet enemy
     g.clear();
     g.fillStyle(0xff0044); g.fillRect(1, 0, 4, 10);
     g.fillStyle(0xff8888); g.fillRect(2, 0, 2, 5);
     g.generateTexture('ebullet', 6, 10);
 
-    // Particle star
     g.clear();
     g.fillStyle(0xffffff); g.fillRect(0, 0, 3, 3);
     g.generateTexture('star', 3, 3);
 
-    // Power-up
     g.clear();
     g.fillStyle(0xffe600); g.fillRect(4, 0, 8, 4); g.fillRect(0, 4, 16, 8); g.fillRect(4, 12, 8, 4);
     g.fillStyle(0xffffff); g.fillRect(6, 6, 4, 4);
     g.generateTexture('powerup', 16, 16);
 
-    // Shield power-up
     g.clear();
     g.fillStyle(0x00ff6a); g.fillTriangle(8, 0, 0, 14, 16, 14);
     g.fillStyle(0x00aa44); g.fillTriangle(8, 4, 3, 12, 13, 12);
@@ -181,7 +243,6 @@ class MenuScene extends Phaser.Scene {
     this.add.rectangle(W/2, H/2, W, H, 0x04040e);
     this.createStarfield();
 
-    // Title
     this.add.text(W/2, 100, 'NEON', {
       fontFamily: "'Press Start 2P'", fontSize: 36,
       fill: '#00f5ff', stroke: '#004466', strokeThickness: 4
@@ -195,21 +256,20 @@ class MenuScene extends Phaser.Scene {
       fontFamily: "'Press Start 2P'", fontSize: 8, fill: '#44446a'
     }).setOrigin(0.5);
 
-    const startTxt = this.add.text(W/2, 310, '[ PRESS SPACE TO START ]', {
+    const startTxt = this.add.text(W/2, 310, '[ SPACE / TAP TO START ]', {
       fontFamily: "'Press Start 2P'", fontSize: 10, fill: '#ffe600'
     }).setOrigin(0.5);
-
     this.tweens.add({ targets: startTxt, alpha: 0, duration: 600, yoyo: true, repeat: -1 });
 
-    this.add.text(W/2, 380, 'CONTROLS', { fontFamily: "'Press Start 2P'", fontSize: 9, fill: '#00f5ff' }).setOrigin(0.5);
-    this.add.text(W/2, 410, '← → MOVE    SPACE SHOOT', { fontFamily: "'Press Start 2P'", fontSize: 8, fill: '#666688' }).setOrigin(0.5);
+    this.add.text(W/2, 375, 'CONTROLS', { fontFamily: "'Press Start 2P'", fontSize: 9, fill: '#00f5ff' }).setOrigin(0.5);
+    this.add.text(W/2, 402, '← → MOVE    SPACE SHOOT', { fontFamily: "'Press Start 2P'", fontSize: 7, fill: '#666688' }).setOrigin(0.5);
+    this.add.text(W/2, 426, '[ MOBILE: USE ON-SCREEN BUTTONS ]', { fontFamily: "'Press Start 2P'", fontSize: 6, fill: '#44446a' }).setOrigin(0.5);
 
     this.add.text(W/2, 470, `HI-SCORE: ${hiScore}`, { fontFamily: "'Press Start 2P'", fontSize: 9, fill: '#ff007f' }).setOrigin(0.5);
 
-    this.input.keyboard.once('keydown-SPACE', () => {
-      initAudio();
-      this.scene.start('Game');
-    });
+    const doStart = () => { initAudio(); this.scene.start('Game'); };
+    this.input.keyboard.once('keydown-SPACE', doStart);
+    this.input.once('pointerdown', doStart);
   }
 
   createStarfield() {
@@ -230,81 +290,69 @@ class GameScene extends Phaser.Scene {
   create() {
     this.score = 0; this.lives = 3; this.level = 1;
     this.bossActive = false; this.shielded = false; this.rapidFire = false;
-    this.canShoot = true; this.gameOver = false; this.invincible = false; this.wavePending = false;
+    this.canShoot = true; this.gameOver = false; this.invincible = false;
+    this.wavePending = false; this.prevTouchFire = false;
 
-    // Background
     this.bg = this.add.rectangle(W/2, H/2, W, H, 0x04040e);
     this.createStarfield();
 
-    // Grid lines (retro effect)
     const grid = this.add.graphics();
     grid.lineStyle(1, 0x00f5ff, 0.03);
     for (let x = 0; x < W; x += 40) { grid.moveTo(x, 0); grid.lineTo(x, H); }
     for (let y = 0; y < H; y += 40) { grid.moveTo(0, y); grid.lineTo(W, y); }
     grid.strokePath();
 
-    // Groups
-    this.bullets = this.physics.add.group();
+    this.bullets      = this.physics.add.group();
     this.enemyBullets = this.physics.add.group();
-    this.enemies = this.physics.add.group();
-    this.powerups = this.physics.add.group();
-    this.particles = this.add.particles(0, 0, 'star', { emitting: false });
+    this.enemies      = this.physics.add.group();
+    this.powerups     = this.physics.add.group();
+    this.particles    = this.add.particles(0, 0, 'star', { emitting: false });
 
-    // Player
     this.player = this.physics.add.sprite(W/2, H - 60, 'player');
     this.player.setCollideWorldBounds(true);
     this.player.body.setSize(28, 30);
     this.shieldGfx = this.add.graphics();
 
-    // HUD
     this.hudScore = this.add.text(8, 8, 'SCORE: 0', { fontFamily: "'Press Start 2P'", fontSize: 8, fill: '#00f5ff' }).setDepth(10);
     this.hudLives = this.add.text(W - 8, 8, '♥♥♥', { fontFamily: "'Press Start 2P'", fontSize: 8, fill: '#ff007f' }).setOrigin(1, 0).setDepth(10);
     this.hudLevel = this.add.text(W/2, 8, 'LEVEL 1', { fontFamily: "'Press Start 2P'", fontSize: 8, fill: '#ffe600' }).setOrigin(0.5, 0).setDepth(10);
 
-    // Level announcement text
     this.levelText = this.add.text(W/2, 16, `LEVEL ${this.level}`, {
       fontFamily: "'Press Start 2P'", fontSize: 10, fill: '#00f5ff', alpha: 0
     }).setOrigin(0.5);
 
-    // Controls
-    this.cursors = this.input.keyboard.createCursorKeys();
+    this.cursors  = this.input.keyboard.createCursorKeys();
     this.spaceKey = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.SPACE);
 
-    // Collisions
-    this.physics.add.overlap(this.bullets, this.enemies, this.hitEnemy, null, this);
-    this.physics.add.overlap(this.enemyBullets, this.player, this.playerHit, null, this);
-    this.physics.add.overlap(this.enemies, this.player, this.playerHit, null, this);
-    this.physics.add.overlap(this.powerups, this.player, this.collectPowerup, null, this);
+    this.physics.add.overlap(this.bullets,      this.enemies, this.hitEnemy,       null, this);
+    this.physics.add.overlap(this.enemyBullets, this.player,  this.playerHit,      null, this);
+    this.physics.add.overlap(this.enemies,      this.player,  this.playerHit,      null, this);
+    this.physics.add.overlap(this.powerups,     this.player,  this.collectPowerup, null, this);
 
     this.spawnWave();
     this.updateHUD();
 
-    // Enemy shoot timer
     this.enemyShootTimer = this.time.addEvent({ delay: 1200, loop: true, callback: this.enemyShoot, callbackScope: this });
-
-    // Level text pulse
     this.tweens.add({ targets: this.levelText, alpha: 1, duration: 400, yoyo: true, repeat: 2 });
   }
 
   createStarfield() {
     this.stars = [];
     for (let i = 0; i < 100; i++) {
-      const x = Phaser.Math.Between(0, W);
-      const y = Phaser.Math.Between(0, H);
+      const x     = Phaser.Math.Between(0, W);
+      const y     = Phaser.Math.Between(0, H);
       const speed = Phaser.Math.FloatBetween(0.5, 2.5);
-      const size = speed < 1 ? 1 : speed < 2 ? 2 : 3;
-      const a = speed / 3;
-      const star = this.add.rectangle(x, y, size, size, 0xffffff, a);
+      const size  = speed < 1 ? 1 : speed < 2 ? 2 : 3;
+      const star  = this.add.rectangle(x, y, size, size, 0xffffff, speed / 3);
       this.stars.push({ obj: star, speed });
     }
   }
 
   spawnWave() {
-    const cols = Math.min(6 + this.level, 10);
-    const rows = Math.min(1 + Math.floor(this.level / 2), 4);
-    const type = this.level >= 5 ? 'enemy2' : 'enemy1';
+    const cols    = Math.min(6 + this.level, 10);
+    const rows    = Math.min(1 + Math.floor(this.level / 2), 4);
+    const type    = this.level >= 5 ? 'enemy2' : 'enemy1';
     const spacing = Math.min((W - 60) / cols, 54);
-
     for (let r = 0; r < rows; r++) {
       for (let c = 0; c < cols; c++) {
         const x = 30 + c * spacing + spacing / 2;
@@ -312,25 +360,21 @@ class GameScene extends Phaser.Scene {
         const e = this.enemies.create(x, y, type);
         e.hp = this.level >= 3 ? 2 : 1;
         e.setVelocityY(30 + this.level * 8);
-        // Zigzag movement
         this.tweens.add({ targets: e, x: x + Phaser.Math.Between(-30, 30), duration: 1000 + Math.random() * 500, yoyo: true, repeat: -1, ease: 'Sine.easeInOut' });
       }
     }
-
-    // Boss every 5 levels
     if (this.level % 5 === 0) this.spawnBoss();
   }
 
   spawnBoss() {
     this.bossActive = true;
-    const boss = this.enemies.create(W / 2, 80, 'boss');
-    boss.hp = 15 + this.level * 3;
-    boss.maxHp = boss.hp;
+    const boss  = this.enemies.create(W / 2, 80, 'boss');
+    boss.hp     = 15 + this.level * 3;
+    boss.maxHp  = boss.hp;
     boss.isBoss = true;
     boss.setVelocityY(0);
     this.tweens.add({ targets: boss, x: { from: 60, to: W - 60 }, duration: 2500, yoyo: true, repeat: -1, ease: 'Sine.easeInOut' });
-
-    this.bossBar = this.add.graphics();
+    this.bossBar  = this.add.graphics();
     this.bossName = this.add.text(W / 2, H - 28, `BOSS — ${this.level >= 10 ? 'ULTRA' : 'MEGA'} UNIT`, {
       fontFamily: "'Press Start 2P'", fontSize: 8, fill: '#ff0044'
     }).setOrigin(0.5);
@@ -340,12 +384,10 @@ class GameScene extends Phaser.Scene {
   drawBossBar(boss) {
     if (!this.bossBar) return;
     this.bossBar.clear();
-    const bw = W - 80, bh = 8;
-    const pct = boss.hp / boss.maxHp;
+    const bw = W - 80, bh = 8, pct = boss.hp / boss.maxHp;
     this.bossBar.fillStyle(0x220011);
     this.bossBar.fillRect(40, H - 44, bw, bh);
-    const col = pct > 0.5 ? 0xff4400 : pct > 0.25 ? 0xff8800 : 0xff0000;
-    this.bossBar.fillStyle(col);
+    this.bossBar.fillStyle(pct > 0.5 ? 0xff4400 : pct > 0.25 ? 0xff8800 : 0xff0000);
     this.bossBar.fillRect(40, H - 44, bw * pct, bh);
     this.bossBar.lineStyle(1, 0xff4400, 0.5);
     this.bossBar.strokeRect(40, H - 44, bw, bh);
@@ -354,9 +396,8 @@ class GameScene extends Phaser.Scene {
   enemyShoot() {
     if (this.gameOver) return;
     const enemies = this.enemies.getChildren();
-    if (enemies.length === 0) return;
-    const shooters = Phaser.Utils.Array.Shuffle(enemies).slice(0, Math.min(2 + this.level, 4));
-    shooters.forEach(e => {
+    if (!enemies.length) return;
+    Phaser.Utils.Array.Shuffle(enemies).slice(0, Math.min(2 + this.level, 4)).forEach(e => {
       if (!e.active) return;
       const b = this.enemyBullets.create(e.x, e.y + 10, 'ebullet');
       b.setVelocityY(180 + this.level * 15);
@@ -368,36 +409,26 @@ class GameScene extends Phaser.Scene {
     bullet.destroy();
     enemy.hp--;
     this.cameras.main.shake(50, 0.005);
-
     if (enemy.hp <= 0) {
       this.explode(enemy.x, enemy.y, enemy.isBoss ? 20 : 8, enemy.isBoss ? 0xff6600 : 0xff2244);
       playExplosion();
-
       const points = enemy.isBoss ? 500 * this.level : (enemy.texture.key === 'enemy2' ? 200 : 100) * this.level;
-      this.score += points;
-
-      // Score popup
+      this.score  += points;
       const txt = this.add.text(enemy.x, enemy.y - 10, `+${points}`, {
-        fontFamily: "'Press Start 2P'", fontSize: 8,
-        fill: enemy.isBoss ? '#ff6600' : '#ffe600'
+        fontFamily: "'Press Start 2P'", fontSize: 8, fill: enemy.isBoss ? '#ff6600' : '#ffe600'
       }).setOrigin(0.5);
       this.tweens.add({ targets: txt, y: txt.y - 40, alpha: 0, duration: 800, onComplete: () => txt.destroy() });
-
       if (enemy.isBoss) {
         this.bossActive = false;
-        if (this.bossBar) { this.bossBar.destroy(); this.bossBar = null; }
+        if (this.bossBar)  { this.bossBar.destroy();  this.bossBar = null; }
         if (this.bossName) { this.bossName.destroy(); this.bossName = null; }
       }
-
-      // Random powerup drop
       if (Math.random() < 0.2) this.dropPowerup(enemy.x, enemy.y);
       enemy.destroy();
     } else {
-      // Flash enemy
       this.tweens.add({ targets: enemy, alpha: 0.3, duration: 80, yoyo: true, repeat: 2 });
       if (enemy.isBoss) this.drawBossBar(enemy);
     }
-
     this.updateHUD();
     this.checkWaveClear();
   }
@@ -434,7 +465,8 @@ class GameScene extends Phaser.Scene {
     } else {
       this.score += 250;
     }
-    const txt = this.add.text(powerup.x, powerup.y - 10, powerup.type === 'shield' ? 'SHIELD!' : powerup.type === 'rapid' ? 'RAPID FIRE!' : '+250', {
+    const label = powerup.type === 'shield' ? 'SHIELD!' : powerup.type === 'rapid' ? 'RAPID FIRE!' : '+250';
+    const txt = this.add.text(powerup.x, powerup.y - 10, label, {
       fontFamily: "'Press Start 2P'", fontSize: 8, fill: '#ffe600'
     }).setOrigin(0.5);
     this.tweens.add({ targets: txt, y: txt.y - 40, alpha: 0, duration: 1000, onComplete: () => txt.destroy() });
@@ -443,10 +475,8 @@ class GameScene extends Phaser.Scene {
   }
 
   dropPowerup(x, y) {
-    const types = ['score', 'shield', 'rapid'];
-    const type = Phaser.Utils.Array.GetRandom(types);
-    const key = type === 'shield' ? 'shield_pu' : 'powerup';
-    const pu = this.powerups.create(x, y, key);
+    const type = Phaser.Utils.Array.GetRandom(['score', 'shield', 'rapid']);
+    const pu   = this.powerups.create(x, y, type === 'shield' ? 'shield_pu' : 'powerup');
     pu.type = type;
     pu.setVelocityY(60);
     this.tweens.add({ targets: pu, scaleX: 1.2, scaleY: 1.2, duration: 400, yoyo: true, repeat: -1 });
@@ -456,10 +486,12 @@ class GameScene extends Phaser.Scene {
     for (let i = 0; i < count; i++) {
       const px = x + Phaser.Math.Between(-15, 15);
       const py = y + Phaser.Math.Between(-15, 15);
-      const p = this.add.rectangle(px, py, Phaser.Math.Between(2, 6), Phaser.Math.Between(2, 6), color);
-      const vx = Phaser.Math.Between(-120, 120);
-      const vy = Phaser.Math.Between(-120, 120);
-      this.tweens.add({ targets: p, x: px + vx * 0.5, y: py + vy * 0.5, alpha: 0, scaleX: 0, scaleY: 0, duration: Phaser.Math.Between(300, 600), onComplete: () => p.destroy() });
+      const p  = this.add.rectangle(px, py, Phaser.Math.Between(2, 6), Phaser.Math.Between(2, 6), color);
+      this.tweens.add({
+        targets: p, x: px + Phaser.Math.Between(-60, 60), y: py + Phaser.Math.Between(-60, 60),
+        alpha: 0, scaleX: 0, scaleY: 0, duration: Phaser.Math.Between(300, 600),
+        onComplete: () => p.destroy()
+      });
     }
   }
 
@@ -474,7 +506,9 @@ class GameScene extends Phaser.Scene {
         stroke: '#004466', strokeThickness: 3
       }).setOrigin(0.5);
       this.cameras.main.flash(500, 0, 100, 100);
-      this.tweens.add({ targets: txt, alpha: 0, duration: 1500, delay: 800, onComplete: () => { txt.destroy(); this.spawnWave(); this.wavePending = false; } });
+      this.tweens.add({ targets: txt, alpha: 0, duration: 1500, delay: 800,
+        onComplete: () => { txt.destroy(); this.spawnWave(); this.wavePending = false; }
+      });
       this.enemyShootTimer.delay = Math.max(400, 1200 - this.level * 80);
     }
   }
@@ -492,7 +526,7 @@ class GameScene extends Phaser.Scene {
     if (scoreEl) scoreEl.textContent = this.score.toLocaleString();
     if (levelEl) levelEl.textContent = this.level;
     if (livesEl) livesEl.textContent = '♥'.repeat(Math.max(0, this.lives));
-    if (hiEl) hiEl.textContent = Math.max(hiScore, this.score).toLocaleString();
+    if (hiEl)    hiEl.textContent    = Math.max(hiScore, this.score).toLocaleString();
     if (this.hudScore) this.hudScore.setText('SCORE: ' + this.score.toLocaleString());
     if (this.hudLives) this.hudLives.setText('♥'.repeat(Math.max(0, this.lives)));
     if (this.hudLevel) this.hudLevel.setText('LEVEL ' + this.level);
@@ -507,13 +541,13 @@ class GameScene extends Phaser.Scene {
       if (s.obj.y > H) { s.obj.y = 0; s.obj.x = Phaser.Math.Between(0, W); }
     });
 
-    // Player movement
+    // Movement (keyboard + touch)
     const spd = 280;
-    if (this.cursors.left.isDown) this.player.setVelocityX(-spd);
-    else if (this.cursors.right.isDown) this.player.setVelocityX(spd);
-    else this.player.setVelocityX(0);
+    if      (this.cursors.left.isDown  || touchState.left)  this.player.setVelocityX(-spd);
+    else if (this.cursors.right.isDown || touchState.right) this.player.setVelocityX(spd);
+    else                                                     this.player.setVelocityX(0);
 
-    // Shield display
+    // Shield
     this.shieldGfx.clear();
     if (this.shielded) {
       this.shieldGfx.lineStyle(2, 0x00ff6a, 0.8);
@@ -522,8 +556,13 @@ class GameScene extends Phaser.Scene {
       this.shieldGfx.strokeCircle(this.player.x, this.player.y, 30);
     }
 
-    // Shooting
-    if (Phaser.Input.Keyboard.JustDown(this.spaceKey) || (this.rapidFire && this.spaceKey.isDown && this.canShoot)) {
+    // Shooting (keyboard + touch)
+    const touchFireJust = touchState.fire && !this.prevTouchFire;
+    this.prevTouchFire  = touchState.fire;
+    const kbJust  = Phaser.Input.Keyboard.JustDown(this.spaceKey);
+    const anyHeld = this.spaceKey.isDown || touchState.fire;
+
+    if (kbJust || touchFireJust || (this.rapidFire && anyHeld && this.canShoot)) {
       this.shoot();
       if (this.rapidFire) {
         this.canShoot = false;
@@ -531,11 +570,16 @@ class GameScene extends Phaser.Scene {
       }
     }
 
-    // Clean off-screen bullets
+    // Cleanup
     [...this.bullets.getChildren()].forEach(b => { if (b.y < -20) b.destroy(); });
     [...this.enemyBullets.getChildren()].forEach(b => { if (b.y > H + 20) b.destroy(); });
     [...this.powerups.getChildren()].forEach(p => { if (p.y > H + 20) p.destroy(); });
-    [...this.enemies.getChildren()].forEach(e => { if (e.y > H + 40) { e.destroy(); if (!this.gameOver) { this.lives--; this.updateHUD(); if (this.lives <= 0) this.endGame(); } } });
+    [...this.enemies.getChildren()].forEach(e => {
+      if (e.y > H + 40) {
+        e.destroy();
+        if (!this.gameOver) { this.lives--; this.updateHUD(); if (this.lives <= 0) this.endGame(); }
+      }
+    });
     if (!this.gameOver) this.checkWaveClear();
   }
 
@@ -561,37 +605,33 @@ class GameOverScene extends Phaser.Scene {
       const s = this.add.rectangle(Phaser.Math.Between(0, W), Phaser.Math.Between(0, H), 2, 2, 0xffffff, Math.random() * 0.5);
       this.tweens.add({ targets: s, alpha: 0.1, duration: Phaser.Math.Between(500, 1500), yoyo: true, repeat: -1 });
     }
-
     this.add.text(W/2, 120, 'GAME OVER', {
       fontFamily: "'Press Start 2P'", fontSize: 26, fill: '#ff007f',
       stroke: '#440022', strokeThickness: 3
     }).setOrigin(0.5);
-
     this.add.text(W/2, 220, `SCORE`, { fontFamily: "'Press Start 2P'", fontSize: 10, fill: '#44446a' }).setOrigin(0.5);
     const scoreText = this.add.text(W/2, 258, data.score.toLocaleString(), {
       fontFamily: "'Press Start 2P'", fontSize: 22, fill: '#ffe600',
       stroke: '#443300', strokeThickness: 2
     }).setOrigin(0.5);
     this.tweens.add({ targets: scoreText, scaleX: 1.05, scaleY: 1.05, duration: 600, yoyo: true, repeat: -1 });
-
     this.add.text(W/2, 320, `LEVEL REACHED: ${data.level}`, { fontFamily: "'Press Start 2P'", fontSize: 9, fill: '#00f5ff' }).setOrigin(0.5);
     this.add.text(W/2, 350, `HI-SCORE: ${hiScore.toLocaleString()}`, { fontFamily: "'Press Start 2P'", fontSize: 9, fill: '#ff007f' }).setOrigin(0.5);
-
     if (data.score >= hiScore) {
       this.add.text(W/2, 390, '★ NEW HIGH SCORE! ★', { fontFamily: "'Press Start 2P'", fontSize: 9, fill: '#00ff6a' }).setOrigin(0.5);
     }
-
-    const restart = this.add.text(W/2, 450, '[ SPACE = PLAY AGAIN ]', {
+    const restart = this.add.text(W/2, 448, '[ SPACE / TAP = PLAY AGAIN ]', {
       fontFamily: "'Press Start 2P'", fontSize: 9, fill: '#ffe600'
     }).setOrigin(0.5);
     this.tweens.add({ targets: restart, alpha: 0.2, duration: 500, yoyo: true, repeat: -1 });
-
     this.add.text(W/2, 490, '[ M = MAIN MENU ]', {
       fontFamily: "'Press Start 2P'", fontSize: 9, fill: '#44446a'
     }).setOrigin(0.5);
 
-    this.input.keyboard.once('keydown-SPACE', () => this.scene.start('Game'));
+    const doRestart = () => this.scene.start('Game');
+    this.input.keyboard.once('keydown-SPACE', doRestart);
     this.input.keyboard.once('keydown-M', () => this.scene.start('Menu'));
+    this.input.once('pointerdown', doRestart);
   }
 }
 
@@ -607,6 +647,21 @@ const config = {
 
 const game = new Phaser.Game(config);
 window.game = game;
+
+// ── Touch controls ──────────────────────────────────────────────────────
+function setupTouchControls() {
+  function bind(el, key) {
+    el.addEventListener('touchstart',  e => { e.preventDefault(); touchState[key] = true;  el.classList.add('pressed');    }, { passive: false });
+    el.addEventListener('touchend',    e => { e.preventDefault(); touchState[key] = false; el.classList.remove('pressed'); }, { passive: false });
+    el.addEventListener('touchcancel', ()  => {                   touchState[key] = false; el.classList.remove('pressed'); });
+  }
+  bind(document.getElementById('btn-left'),       'left');
+  bind(document.getElementById('btn-right'),      'right');
+  bind(document.getElementById('fire-btn-touch'), 'fire');
+}
+
+setupTouchControls();
+resizeGame();
 </script>
 </body>
 </html>
