@@ -19,8 +19,8 @@
     --green: #00ff6a;
     --dim: #44476a;
     --text: #dde0ff;
-    --sq-dark: #0a1628;
-    --sq-light: #1a2f4a;
+    --sq-dark: #4a7c59;
+    --sq-light: #d4e8b8;
   }
 
   body {
@@ -633,7 +633,7 @@ function renderBoard() {
       const p = chess.get(sq);
       if (p) {
         div.textContent = PIECES[p.color + p.type.toUpperCase()] || '';
-        div.style.color = p.color === 'w' ? '#e8e8e8' : '#111128';
+        div.style.color = p.color === 'w' ? '#ffffff' : '#1a1a2e';
         div.style.textShadow = p.color === 'w'
           ? '0 0 4px rgba(0,0,0,0.9), 0 1px 3px rgba(0,0,0,0.8)'
           : '0 0 4px rgba(200,200,255,0.5), 0 1px 3px rgba(0,0,0,0.5)';
