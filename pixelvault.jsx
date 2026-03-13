@@ -976,7 +976,7 @@ function LoginPage({ onLogin }) {
 
 // --- Main App ---
 export default function App() {
-  const [user, setUser] = useState(null);
+  const [user, setUser] = useState(() => localStorage.getItem("pv_user") || null);
 
   const handleLogin = (username) => {
     localStorage.setItem("pv_user", username);
